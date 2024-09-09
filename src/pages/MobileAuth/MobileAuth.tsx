@@ -1,5 +1,11 @@
 import React, { FormEvent, useState } from "react";
 import { Alert, Button, Typography } from "@mui/material";
+import { initializeApp } from "firebase/app";
+import {
+  getAuth,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+} from "firebase/auth";
 import { PhoneInput } from "react-international-phone";
 import { PhoneNumberUtil } from "google-libphonenumber";
 import "react-international-phone/style.css";
@@ -14,7 +20,17 @@ interface FormData {
   mobileNumber: string;
 }
 const MobileAuth: React.FC = () => {
+  const firebaseConfig = {
+    apiKey: import.meta.env.VITE_API_KEY,
+    authDomain: import.meta.env.VITE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_APP_ID
+  };
   const phoneUtil = PhoneNumberUtil.getInstance();
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
 
   const [formData, setFormData] = useState<FormData>({
     mobileNumber: "",
@@ -31,7 +47,14 @@ const MobileAuth: React.FC = () => {
       return false;
     }
   };
-
+const setupRecaptcha = (): void => {
+  window.recaptchaVerifier = new RecaptchaVerifier(auth, "sign-in-button", {
+    size: "invisible",
+    callback: (response: unknown) => {
+      console.log("reCAPTCHA response: ", response);
+    },
+  });
+};
   const handleChange = (phone: string) => {
     setError(null);
     setFormData({
@@ -47,6 +70,26 @@ const MobileAuth: React.FC = () => {
       setError(ERRORS.invalidPhone);
       return;
     }
+    setupRecaptcha();
+    const appVerifier = window.recaptchaVerifier;
+    signInWithPhoneNumber(
+      auth,
+      formData.mobileNumber,
+      appVerifier
+    )
+      .then((confirmationResult) => {
+        // SMS sent. Prompt user to type the code from the message, then sign the
+        // user in with confirmationResult.confirm(code).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window.confirmationResult as any) = confirmationResult;
+        console.log("Sign in with phone success", confirmationResult);
+        // ...
+      })
+      .catch((error) => {
+        console.log("not sent", error);
+        // Error; SMS not sent
+        // ...
+      });
   };
 
   return (
@@ -68,6 +111,7 @@ const MobileAuth: React.FC = () => {
             </Alert>
           )}
         </div>
+        <div id="sign-in-button"></div>
         <Button
           type="submit"
           variant="contained"
