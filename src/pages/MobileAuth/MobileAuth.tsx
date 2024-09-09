@@ -2,6 +2,7 @@ import React, { FormEvent, useState } from "react";
 import { Alert, Button, Typography } from "@mui/material";
 import { initializeApp } from "firebase/app";
 import {
+  ApplicationVerifier,
   getAuth,
   RecaptchaVerifier,
   signInWithPhoneNumber,
@@ -19,6 +20,12 @@ import styles from "./MobileAuth.module.css";
 interface FormData {
   mobileNumber: string;
 }
+declare global {
+  interface Window {
+    recaptchaVerifier: ApplicationVerifier;
+    confirmationResult: unknown;
+  }
+}
 const MobileAuth: React.FC = () => {
   const firebaseConfig = {
     apiKey: import.meta.env.VITE_API_KEY,
@@ -26,7 +33,7 @@ const MobileAuth: React.FC = () => {
     projectId: import.meta.env.VITE_PROJECT_ID,
     storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
     messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_APP_ID
+    appId: import.meta.env.VITE_APP_ID,
   };
   const phoneUtil = PhoneNumberUtil.getInstance();
   const app = initializeApp(firebaseConfig);
@@ -47,14 +54,14 @@ const MobileAuth: React.FC = () => {
       return false;
     }
   };
-const setupRecaptcha = (): void => {
-  window.recaptchaVerifier = new RecaptchaVerifier(auth, "sign-in-button", {
-    size: "invisible",
-    callback: (response: unknown) => {
-      console.log("reCAPTCHA response: ", response);
-    },
-  });
-};
+  const setupRecaptcha = (): void => {
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, "sign-in-button", {
+      size: "invisible",
+      callback: (response: ApplicationVerifier) => {
+        console.log("reCAPTCHA response: ", response);
+      },
+    });
+  };
   const handleChange = (phone: string) => {
     setError(null);
     setFormData({
@@ -71,17 +78,13 @@ const setupRecaptcha = (): void => {
       return;
     }
     setupRecaptcha();
-    const appVerifier = window.recaptchaVerifier;
-    signInWithPhoneNumber(
-      auth,
-      formData.mobileNumber,
-      appVerifier
-    )
+    const appVerifier: ApplicationVerifier = window.recaptchaVerifier;
+    signInWithPhoneNumber(auth, formData.mobileNumber, appVerifier)
       .then((confirmationResult) => {
         // SMS sent. Prompt user to type the code from the message, then sign the
         // user in with confirmationResult.confirm(code).
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (window.confirmationResult as any) = confirmationResult;
+        window.confirmationResult = confirmationResult;
         console.log("Sign in with phone success", confirmationResult);
         // ...
       })
