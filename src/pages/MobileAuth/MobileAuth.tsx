@@ -3,12 +3,14 @@ import { Alert, Button, Typography } from "@mui/material";
 import { initializeApp } from "firebase/app";
 import {
   ApplicationVerifier,
+  ConfirmationResult,
   getAuth,
   RecaptchaVerifier,
   signInWithPhoneNumber,
 } from "firebase/auth";
 import { PhoneInput } from "react-international-phone";
 import { PhoneNumberUtil } from "google-libphonenumber";
+import { useNavigate } from "react-router-dom";
 import "react-international-phone/style.css";
 
 import colors from "../../styles/colors";
@@ -23,7 +25,7 @@ interface FormData {
 declare global {
   interface Window {
     recaptchaVerifier: ApplicationVerifier;
-    confirmationResult: unknown;
+    confirmationResult: ConfirmationResult;
   }
 }
 const MobileAuth: React.FC = () => {
@@ -38,6 +40,7 @@ const MobileAuth: React.FC = () => {
   const phoneUtil = PhoneNumberUtil.getInstance();
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState<FormData>({
     mobileNumber: "",
@@ -85,11 +88,13 @@ const MobileAuth: React.FC = () => {
         // user in with confirmationResult.confirm(code).
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         window.confirmationResult = confirmationResult;
-        console.log("Sign in with phone success", confirmationResult);
+        navigate("/verification-code");
         // ...
       })
       .catch((error) => {
         console.log("not sent", error);
+        navigate("/verification-code");
+
         // Error; SMS not sent
         // ...
       });

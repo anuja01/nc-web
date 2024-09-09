@@ -4,6 +4,8 @@ export const FORM_TEXTS = {
   proceed: "Proceed",
   signInWithPhone: "Sign in with phone",
   selectSignInOption: "Please select a sign in option",
+  enterVerificationCode: "Please enter the verification code",
+  verify: "Verify"
 };
 
 export const ERRORS = {
